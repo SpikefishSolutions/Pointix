@@ -88,3 +88,6 @@ python3 main.py -h
 
 #### 4. Logging
 After the script runs, it will output all of the hosts that were added, that were ignored, and that failed.  Everything is also logged to the 'logging.txt' file to determine why particular hosts failed to add to zabbix. Informative is used for successful actions, warnings are used for hosts that failed to add, and severe warnings are reserved for issues that will cause the code to stop executing.  Please refer to the logging file when something fails, and if you believe it is due to the script in some way, please provide the lines you believe are causing the issue.
+
+## Contact Spikefish
+For implementation or development inquiries email contact@spikefishsolutions.com or visit our website spikefishsolutions.com
