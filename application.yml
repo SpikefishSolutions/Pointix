@@ -1,0 +1,15 @@
+checkpoint:
+        username: admin
+        password: examplepass
+
+zabbix:
+        username: Admin
+        password: examplepass
+
+snmp2:
+        community: '{$SNMP2_COMMUNITY}'
+
+snmp3:
+        security: '{$SNMPV3_SECURITY}'
+        auth: '{$SNMPV3_AUTH}'
+        priv: '{$SNMPV3_PRIV}'

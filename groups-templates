@@ -1,0 +1,10 @@
+gatewayGroupName:Check Point Standalone Gateways
+gatewayTemplateName:Check Point Standalone Gateways,Check Point Firewalls,Check Point Generic Device
+clusterGroupName:Check Point Cluster
+clusterTemplateName:Check Point Cluster,Check Point Firewalls,Check Point Generic Device
+clusterMembersGroupName:Check Point Cluster Members
+clusterMembersTemplateName:Check Point Cluster Members,Check Point Firewalls,Check Point Generic Device
+managementGroupName:Check Point CMA
+managementTemplateName:Check Point CMA
+logGroupName:Check Point CLM
+logTemplateName:Check Point CLM
