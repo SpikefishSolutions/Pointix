@@ -8,7 +8,6 @@ cpapi/__pycache__/mgmt_api.cpython-37.pyc
 cpapi/__pycache__/utils.cpython-37.pyc
 spikefish/checkpoint/apiv161/__pycache__/cp_apicalls.cpython-37.pyc
 spikefish/spikefish_libs/logging/__pycache__/logging.cpython-37.pyc
-cp_apicalls.py
 cpapi
 .vscode/launch.json
 spikefish/checkpoint/apiv161/policypackage.py
