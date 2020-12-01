@@ -3,6 +3,8 @@ Pointix is a tool for populating Zabbix with all of the Check Point devices in y
 
 Pointix will query a Check Point Primary MDS, and a particular domain within that MDS, and add the standalone gateways, clusters, MDS management servers, and management log servers to zabbix. For all of the added hosts, the script will automatically add the specified groups and templates to that host in Zabbix. Pointix can also disable a gateway in Zabbix if the comment in Check Point for that device is 'disabled'. Pointix will log to 'logging.txt' in the same directory as the script is run.
 
+One of the use cases for Pointix is to make Zabbix a source of truth for viewing your entire Check Point inventory/environment.  Pointix can be set to run every night and will add any new Check Point devices to Zabbix, and any host that already exists will not be added again.  You can also have templates in Zabbix that will pull the serial number from your Check Point devices over SNMP and store that in the inventory section of the device.  From there you can generate reports through Zabbix or integrate with other solutions like Power BI.  If you would like assistance with this you can find our contact information at the bottom of this readme.
+
 **Tagging and inventory**<br>
 Pointix will apply the following tags to the hosts when added to Zabbix:
 * Vendor: Will always be 'Check Point' since this is only made to operate with Check Point
