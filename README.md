@@ -80,7 +80,7 @@ Links for these modules:
 
 (Note: You can just include the folder 'cpapi' in the main directory for this project.)
 
-#### 3. Create and edit the necessary files and run the tool
+#### 2. Create and edit the necessary files and run the tool
 Make sure that you have filled out the 'groups-templates' file as explained above, the list of DAIP gateways in the 'daip' file if there are any in the environment, as well as the 'override' and 'ignore-ip' files if desired.  As long as 'groups-templates' is filled out, the code can be executed as follows:
 ```
 python3 main.py -c <MDSIP> -d <domain> -z <ZABBIXURL> -s <SNMPVERSION(2 or 3)>
@@ -88,7 +88,7 @@ python3 main.py -c 10.10.10.10 -d example_domain -z http://10.10.10.11/zabbix/ -
 python3 main.py -h
 ```
 
-#### 4. Logging
+#### 3. Logging
 After the script runs, it will output all of the hosts that were added, that were ignored, and that failed.  Everything is also logged to the 'logging.txt' file to determine why particular hosts failed to add to zabbix. Informative is used for successful actions, warnings are used for hosts that failed to add, and severe warnings are reserved for issues that will cause the code to stop executing.  Please refer to the logging file when something fails, and if you believe it is due to the script in some way, please provide the lines you believe are causing the issue.
 
 ## Contact Spikefish
