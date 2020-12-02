@@ -79,10 +79,10 @@ Links for these modules:
 * py-zabbix: [Here](https://pypi.org/project/py-zabbix/) 
 * pyyaml: [Here](https://github.com/yaml/pyyaml) 
 
-Installation Commands:
-pip install py-zabbix
-pip install pyyaml
-Download the source code for the Check Point API and place the 'cpapi' folder in the main directory for Pointix
+Installation Commands:<br>
+* pip install py-zabbix<br>
+* pip install pyyaml<br>
+* Download the source code for the Check Point API and place the 'cpapi' folder in the main directory for Pointix
 
 #### 2. Create and edit the necessary files and run the tool
 Make sure that you have filled out the 'groups-templates' file as explained above, the list of DAIP gateways in the 'daip' file if there are any in the environment, as well as the 'override' and 'ignore-ip' files if desired.  As long as 'groups-templates' is filled out, the code can be executed as follows:
