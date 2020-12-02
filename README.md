@@ -80,8 +80,7 @@ Links for these modules:
 * pyyaml: [Here](https://github.com/yaml/pyyaml) 
 
 Installation Commands:<br>
-* pip install py-zabbix<br>
-* pip install pyyaml<br>
+* pip install py-zabbix pyyaml<br>
 * Download the source code for the Check Point API and place the 'cpapi' folder in the main directory for Pointix
 
 #### 2. Create and edit the necessary files and run the tool
