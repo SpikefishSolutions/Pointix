@@ -34,11 +34,11 @@ The reason for this is so that you can monitor the active firewall with Zabbix o
 192.168.100.3
 ```
 * daip
-  * DAIP gateways will often change their IP address so it does not make sense to place their current IP address into Zabbix.  Instead the 'daip' file is a list of DAIP GW names and the domain names that you want to place into Zabbix for monitoring.  This can also be used with non-daip gateways if you want to monitor certain firewalls by their domain name.
-  * In the below example a DAIP GW named 'daip-gw' will have the domain example.local.com in Zabbix for monitoring.  And a DAIP GW named 'another-daip-gw' will have the domain anotherexample.local.com in zabbix for monitoring.
+  * DAIP gateways will often change their IP address so it does not make sense to place their current IP address into Zabbix.  Instead the 'daip' file is a list of DAIP GW names and the FQHNs that you want to place into Zabbix for monitoring.  This can also be used with non-daip gateways if you want to monitor certain firewalls by their FQHN.  This entry will come down to how you have DNS setup.
+  * In the below example a DAIP GW named 'daip-gw' will have the FQHN daip-gw.local.com in Zabbix for monitoring.  And a DAIP GW named 'another-daip-gw' will have the FQHN anotherexample.local.com in zabbix for monitoring.
   * Example format:
 ```
-daip-gw:example.local.com
+daip-gw:daip-gw.local.com
 another-daip-gw:anotherexample.local.com
 ```
 * application.yml
