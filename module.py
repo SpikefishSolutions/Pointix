@@ -107,7 +107,7 @@ class Pointix():
         try:
             with open('daip') as f:
                 for line in f:
-                    (key,val) = line.split()
+                    (key,val) = line.split(':')
                     self.daipIP[key] = val
             logging.logging('3', 'Successfully read Daip file', 'getFiles')
         except:

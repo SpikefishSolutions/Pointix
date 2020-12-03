@@ -38,8 +38,8 @@ The reason for this is so that you can monitor the active firewall with Zabbix o
   * In the below example a DAIP GW named 'daip-gw' will have the domain example.local.com in Zabbix for monitoring.  And a DAIP GW named 'another-daip-gw' will have the domain anotherexample.local.com in zabbix for monitoring.
   * Example format:
 ```
-daip-gw example.local.com
-another-daip-gw anotherexample.local.com
+daip-gw:example.local.com
+another-daip-gw:anotherexample.local.com
 ```
 * application.yml
   * This is the YAML file where credentials are stored for the Check Point and Zabbix API calls and SNMP credentials.  This file should only be viewable by the OS user used to run the tool.  If this file is not present, or if some credentials are missing, the user will be asked for the missing credentials on run.  I chose to use a macro for my SNMP credentials which is stored as a secret on a macro that gets applied to all of my devices.
