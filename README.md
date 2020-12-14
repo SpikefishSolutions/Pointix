@@ -1,5 +1,5 @@
 ## What is Pointix?
-Pointix is a tool for populating Zabbix with all of the Check Point devices in your network.  Pointix uses the Check Point API to obtain all of the devices on the network and the Zabbix API for adding all of the devices to be monitored.  Pointix will only work on R80.40, or Check Point API version 1.6 and up.  
+Pointix is a tool for populating Zabbix with all of the Check Point devices in your network.  Pointix uses the Check Point API to obtain all of the devices on the network and the Zabbix API for adding all of the devices to be monitored.  Pointix will only work on R80.40, or Check Point API version 1.6 and up, if you need help adapting Pointix for earlier versions of the API our contact info is at the bottom of the readme.  
 
 Pointix will query a Check Point Primary MDS, and a particular domain within that MDS, or a Standalone Management Server, and add the standalone gateways, clusters, MDS management servers, and management log servers to zabbix. For all of the added hosts, the script will automatically add the specified groups and templates to that host in Zabbix. Pointix can also disable a gateway in Zabbix if the comment in Check Point for that device is 'disabled'. Pointix will log to 'logging.txt' in the same directory as the script is run.
 
