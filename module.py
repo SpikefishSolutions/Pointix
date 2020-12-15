@@ -16,6 +16,7 @@
 
 import os
 import yaml
+import json
 from ipaddress import ip_address
 from zabbix.api import ZabbixAPI
 from cpapi import APIClient, APIClientArgs
@@ -28,7 +29,7 @@ def severeHandle():
 
 class Pointix():
 
-    def __init__(self, primaryMDS, cpDomain, zabbixURL, snmpVers):
+    def __init__(self, primaryMDS, zabbixURL, snmpVers, cpDomain=False):
 
         # Instantiate the lists for tracking results
         self.successGateways = []
@@ -46,6 +47,10 @@ class Pointix():
         self.domain = cpDomain
         self.zabbix = zabbixURL
         self.snmpVersion = snmpVers
+        if cpDomain == False:
+            self.isMDS = False
+        else:
+            self.isMDS = True
 
 
     def getGroups(self):
@@ -216,8 +221,11 @@ class Pointix():
         # Queries the provided domain for all of its gateways
         self.gatewaysUid = []
         self.gatewaysNames = []
-
-        gatewaysObjects = self.cpDomainAPI.api_call('show-simple-gateways', { })
+        
+        if self.isMDS == True:
+            gatewaysObjects = self.cpDomainAPI.api_call('show-simple-gateways', { })
+        else:
+            gatewaysObjects = self.cpGlobalAPI.api_call('show-simple-gateways', { })
         
         if gatewaysObjects.success == False:
             logging.logging('1', gatewaysObjects.error_message, 'getGateways')
@@ -228,6 +236,8 @@ class Pointix():
             gatewaysResultsTemp = gatewaysResults[x]
             self.gatewaysUid.append(gatewaysResultsTemp['uid'])
             self.gatewaysNames.append(gatewaysResultsTemp['name'])
+        
+        print(self.gatewaysNames)
 
         logging.logging('3', 'Successfully pulled gateways from MDS', 'getGateways')
         return
@@ -237,8 +247,11 @@ class Pointix():
         # Queries the provided domain for all of its clusters
         self.clustersUid = []
         self.clustersNames = []
-
-        clustersObjects = self.cpDomainAPI.api_call('show-simple-clusters', { })
+        
+        if self.isMDS == True:
+            clustersObjects = self.cpDomainAPI.api_call('show-simple-clusters', { })
+        else:
+            clustersObjects = self.cpGlobalAPI.api_call('show-simple-clusters', { })
         
         if clustersObjects.success == False:
             logging.logging('1', clustersObjects.error_message, 'getClusters')
@@ -256,8 +269,11 @@ class Pointix():
 
     def getGatewayInfo(self, gatewayUid):
         # Queries the Check Point API for information on a gateway uid
-
-        gatewayInfo = self.cpDomainAPI.api_call('show-simple-gateway', {'uid': gatewayUid})
+        
+        if self.isMDS == True:
+            gatewayInfo = self.cpDomainAPI.api_call('show-simple-gateway', {'uid': gatewayUid})
+        else:
+            gatewayInfo = self.cpGlobalAPI.api_call('show-simple-gateway', {'uid': gatewayUid})
 
         if gatewayInfo.success == False:
             logging.logging('1', gatewayInfo.error_message, 'getGatewayInfo')
@@ -273,8 +289,11 @@ class Pointix():
 
         clusterMembersNames = []
         clusterMembersIP = []
-
-        clusterInfo = self.cpDomainAPI.api_call('show-simple-cluster', {'uid': clusterUid})
+        
+        if self.isMDS == True:
+            clusterInfo = self.cpDomainAPI.api_call('show-simple-cluster', {'uid': clusterUid})
+        else:
+            clusterInfo = self.cpGlobalAPI.api_call('show-simple-cluster', {'uid': clusterUid})
 
         if clusterInfo.success == False:
             logging.logging('1', clusterInfo.error_message, 'getClusterInfo')
@@ -437,26 +456,46 @@ class Pointix():
         # Checks the override IP dictionary for a match
         if gatewayInfo.data['ipv4-address'] in self.overrideIP:
             gatewayInfo.data['ipv4-address'] = self.overrideIP[gatewayInfo.data['ipv4-address']]
-
-        # Adds the gateway to Zabbix
+        
+        
+        
         try:
-            # Check the daip name dictionary for a match
+            # Building JSON Request
+            jsonData = {}
+            jsonData['host'] = gatewayName
+            jsonData['status'] = gatewayStatus
+            Interface = {'type': 2, 'main': 1, 'port': 161}
             if gatewayName in self.daipIP:
-                gatewayInfo.data['ipv4-address'] = self.daipIP[gatewayName]
-                if self.snmpVersion == '3':
-                    self.zabbixClient.do_request('host.create', {'host': gatewayName, 'status': gatewayStatus, 'interfaces': [{'type': 2, 'main': 1, 'useip': 0, 'ip': '', 'dns': gatewayInfo.data['ipv4-address'], 'port': '161', 'details': {'version': 3, 'bulk': 1, 'securityname': self.snmpUser, 'securitylevel': 2, 'authpassphrase': self.snmpAuth, 'authprotocol': 1, 'privpassphrase': self.snmpPriv, 'privprotocol': 1}}], 'groups': gatewayGroups, 'tags': [{'tag': 'Domain', 'value': domainName}, {'tag': 'Vendor', 'value': 'Check Point'}], 'macros': [{'macro': '{$DOMAIN_NAME}', 'value': domainName}], 'templates': gatewayTemplates, 'inventory_mode': 1, 'inventory': {'location': domainName, 'vendor': 'Check Point'}})
-                elif self.snmpVersion == '2':
-                    self.zabbixClient.do_request('host.create', {'host': gatewayName, 'status': gatewayStatus, 'interfaces': [{'type': 2, 'main': 1, 'useip': 0, 'ip': '', 'dns': gatewayInfo.data['ipv4-address'], 'port': '161', 'details': {'version': 2, 'bulk': 1, 'community': self.snmpCommunity}}], 'groups': gatewayGroups, 'tags': [{'tag': 'Domain', 'value': domainName}, {'tag': 'Vendor', 'value': 'Check Point'}], 'macros': [{'macro': '{$DOMAIN_NAME}', 'value': domainName}], 'templates': gatewayTemplates, 'inventory_mode': 1, 'inventory': {'location': domainName, 'vendor': 'Check Point'}})
-            elif gatewayInfo.data['dynamic-ip'] == 'true':
-                logging.logging('2', f'DAIP gateway {gatewayName} not found in the daip file, not adding to Zabbix', 'addGatewayHost')
-                self.failedGateways.append(gatewayName)
-                return(True)
-            else:
-                if self.snmpVersion == '3':
-                    self.zabbixClient.do_request('host.create', {'host': gatewayName, 'status': gatewayStatus, 'interfaces': [{'type': 2, 'main': 1, 'useip': 1, 'ip': gatewayInfo.data['ipv4-address'], 'dns': '', 'port': '161', 'details': {'version': 3, 'bulk': 1, 'securityname': self.snmpUser, 'securitylevel': 2, 'authpassphrase': self.snmpAuth, 'authprotocol': 1, 'privpassphrase': self.snmpPriv, 'privprotocol': 1}}], 'groups': gatewayGroups, 'tags': [{'tag': 'Domain', 'value': domainName}, {'tag': 'Vendor', 'value': 'Check Point'}], 'macros': [{'macro': '{$DOMAIN_NAME}', 'value': domainName}], 'templates': gatewayTemplates, 'inventory_mode': 1, 'inventory': {'location': domainName, 'vendor': 'Check Point'}})
-                elif self.snmpVersion == '2':
-                    self.zabbixClient.do_request('host.create', {'host': gatewayName, 'status': gatewayStatus, 'interfaces': [{'type': 2, 'main': 1, 'useip': 1, 'ip': gatewayInfo.data['ipv4-address'], 'dns': '', 'port': '161', 'details': {'version': 2, 'bulk': 1, 'community': self.snmpCommunity}}], 'groups': gatewayGroups, 'tags': [{'tag': 'Domain', 'value': domainName}, {'tag': 'Vendor', 'value': 'Check Point'}], 'macros': [{'macro': '{$DOMAIN_NAME}', 'value': domainName}], 'templates': gatewayTemplates, 'inventory_mode': 1, 'inventory': {'location': domainName, 'vendor': 'Check Point'}})
+                Interface['useip'] = 0
+                Interface['ip'] = ''
+                Interface['dns'] = self.daipIP[gatewayName]
+            else: 
+                Interface['useip'] = 1
+                Interface['ip'] = gatewayInfo.data['ipv4-address']
+                Interface['dns'] = ''
             
+            if self.snmpVersion == '3': 
+                Interface['details'] = {'version': 3, 'bulk': 1, 'securityname': self.snmpUser, 'securitylevel': 2, 'authpassphrase': self.snmpAuth, 'authprotocol': 1, 'privpassphrase': self.snmpPriv, 'privprotocol': 1}
+            elif self.snmpVersion == '2':
+                Interface['details'] = {'version': 2, 'bulk': 1, 'community': self.snmpCommunity}
+                
+            jsonData['interfaces'] = [Interface]
+            jsonData['groups'] = gatewayGroups
+            jsonData['tags'] = []
+            jsonData['tags'].append({'tag': 'Vendor', 'value': 'Check Point'})
+            if self.isMDS == True:
+                jsonData['tags'].append({'tag': 'Domain', 'value': self.domain})
+            if self.isMDS == True:
+                jsonData['macros'] = [{'macro': '{$DOMAIN_NAME}', 'value': self.domain}]
+            jsonData['templates'] = gatewayTemplates
+            jsonData['inventory_mode'] = 1
+            jsonData['inventory'] = {}
+            jsonData['inventory']['vendor'] = 'Check Point'
+            if self.isMDS == True:
+                jsonData['inventory']['location'] = domainName
+                
+            #Executing Zabbix API request
+            self.zabbixClient.do_request('host.create', jsonData)
             logging.logging('3', f'Successfully added gateway host {gatewayName} to Zabbix', 'addGatewayHost')
             self.successGateways.append(gatewayName)
         except Exception as e:
@@ -506,47 +545,90 @@ class Pointix():
         
         if clusterInfo.data['comments'].lower() == 'disabled':
             clusterStatus = 1
-        
+            
         try:
             for x in range(0, len(clusterMembersNames)):
-                # Checks the override dictionary for a match on the members IP
+                memberName = clusterMembersNames[x].split(sep, 1)[0]
                 if clusterMembersIP[x] in self.overrideIP:
                     clusterMembersIP[x] = self.overrideIP[clusterMembersIP[x]]
-                
-                # Adds the cluster members to Zabbix
-                memberName = clusterMembersNames[x].split(sep, 1)[0]
-
-                # Check the daip name dictionary for a match
+                    
+                #Building Cluster Memer JSON Request
+                jsonData = {}
+                jsonData['host'] = memberName
+                jsonData['status'] = clusterStatus
+                Interface = {'type': 2, 'main': 1, 'port': 161}
                 if memberName in self.daipIP:
-                    clusterMembersIP[x] = self.daipIP[memberName]
-                    if self.snmpVersion == '3':
-                        self.zabbixClient.do_request('host.create', {'host': memberName, 'status': clusterStatus, 'interfaces': [{'type': 2, 'main': 1, 'useip': 0, 'ip': '', 'dns': clusterMembersIP[x], 'port': '161', 'details': {'version': 3, 'bulk': 1, 'securityname': self.snmpUser, 'securitylevel': 2, 'authpassphrase': self.snmpAuth, 'authprotocol': 1, 'privpassphrase': self.snmpPriv, 'privprotocol': 1}}], 'groups': clusterMembersGroups, 'tags': [{'tag': 'Cluster Name', 'value': clusterName}, {'tag': 'Domain', 'value': domainName}, {'tag': 'Vendor', 'value': 'Check Point'}], 'macros': [{'macro': '{$DOMAIN_NAME}', 'value': domainName}], 'templates': clusterMembersTemplates, 'inventory_mode': 1, 'inventory': {'location': domainName, 'vendor': 'Check Point'}})
-                    elif self.snmpVersion == '2':
-                        self.zabbixClient.do_request('host.create', {'host': memberName, 'status': clusterStatus, 'interfaces': [{'type': 2, 'main': 1, 'useip': 0, 'ip': '', 'dns': clusterMembersIP[x], 'port': '161', 'details': {'version': 2, 'bulk': 1, 'community': self.snmpCommunity}}], 'groups': clusterMembersGroups, 'tags': [{'tag': 'Cluster Name', 'value': clusterName}, {'tag': 'Domain', 'value': domainName}, {'tag': 'Vendor', 'value': 'Check Point'}], 'macros': [{'macro': '{$DOMAIN_NAME}', 'value': domainName}], 'templates': clusterMembersTemplates, 'inventory_mode': 1, 'inventory': {'location': domainName, 'vendor': 'Check Point'}})
-                else:
-                    if self.snmpVersion == '3':
-                        self.zabbixClient.do_request('host.create', {'host': memberName, 'status': clusterStatus, 'interfaces': [{'type': 2, 'main': 1, 'useip': 1, 'ip': clusterMembersIP[x], 'dns': '', 'port': '161', 'details': {'version': 3, 'bulk': 1, 'securityname': self.snmpUser, 'securitylevel': 2, 'authpassphrase': self.snmpAuth, 'authprotocol': 1, 'privpassphrase': self.snmpPriv, 'privprotocol': 1}}], 'groups': clusterMembersGroups, 'tags': [{'tag': 'Cluster Name', 'value': clusterName}, {'tag': 'Domain', 'value': domainName}, {'tag': 'Vendor', 'value': 'Check Point'}], 'macros': [{'macro': '{$DOMAIN_NAME}', 'value': domainName}], 'templates': clusterMembersTemplates, 'inventory_mode': 1, 'inventory': {'location': domainName, 'vendor': 'Check Point'}})
-                    elif self.snmpVersion == '2':
-                        self.zabbixClient.do_request('host.create', {'host': memberName, 'status': clusterStatus, 'interfaces': [{'type': 2, 'main': 1, 'useip': 1, 'ip': clusterMembersIP[x], 'dns': '', 'port': '161', 'details': {'version': 2, 'bulk': 1, 'community': self.snmpCommunity}}], 'groups': clusterMembersGroups, 'tags': [{'tag': 'Cluster Name', 'value': clusterName}, {'tag': 'Domain', 'value': domainName}, {'tag': 'Vendor', 'value': 'Check Point'}], 'macros': [{'macro': '{$DOMAIN_NAME}', 'value': domainName}], 'templates': clusterMembersTemplates, 'inventory_mode': 1, 'inventory': {'location': domainName, 'vendor': 'Check Point'}})
-                logging.logging('3', f'Successfully added cluster member host {memberName}', 'addClusterHost')
-
-            # Check the daip name dictionary for a match and adds the cluster to zabbix
-            if clusterName in self.daipIP:
-                clusterInfo.data['ipv4-address'] = self.daipIP[clusterName]
-                if self.snmpVersion == '3':
-                    self.zabbixClient.do_request('host.create', {'host': clusterName, 'status': clusterStatus, 'interfaces': [{'type': 2, 'main': 1, 'useip': 0, 'ip': '', 'dns': clusterInfo.data['ipv4-address'], 'port': '161', 'details': {'version': 3, 'bulk': 1, 'securityname': self.snmpUser, 'securitylevel': 2, 'authpassphrase': self.snmpAuth, 'authprotocol': 1, 'privpassphrase': self.snmpPriv, 'privprotocol': 1}}], 'groups': clusterGroups, 'tags': [{'tag': 'Cluster Name', 'value': clusterName}, {'tag': 'Domain', 'value': domainName}, {'tag': 'Vendor', 'value': 'Check Point'}], 'macros': [{'macro': '{$DOMAIN_NAME}', 'value': domainName}], 'templates': clusterTemplates, 'inventory_mode': 1, 'inventory': {'location': domainName, 'vendor': 'Check Point'}})
+                    Interface['useip'] = 0
+                    Interface['ip'] = ''
+                    Interface['dns'] = self.daipIP[memberName]
+                else: 
+                    Interface['useip'] = 1
+                    Interface['ip'] = clusterMembersIP[x]
+                    Interface['dns'] = ''
+                
+                if self.snmpVersion == '3': 
+                    Interface['details'] = {'version': 3, 'bulk': 1, 'securityname': self.snmpUser, 'securitylevel': 2, 'authpassphrase': self.snmpAuth, 'authprotocol': 1, 'privpassphrase': self.snmpPriv, 'privprotocol': 1}
                 elif self.snmpVersion == '2':
-                    self.zabbixClient.do_request('host.create', {'host': clusterName, 'status': clusterStatus, 'interfaces': [{'type': 2, 'main': 1, 'useip': 0, 'ip': '', 'dns': clusterInfo.data['ipv4-address'], 'port': '161', 'details': {'version': 2, 'bulk': 1, 'community': self.snmpCommunity}}], 'groups': clusterGroups, 'tags': [{'tag': 'Cluster Name', 'value': clusterName}, {'tag': 'Domain', 'value': domainName}, {'tag': 'Vendor', 'value': 'Check Point'}], 'macros': [{'macro': '{$DOMAIN_NAME}', 'value': domainName}], 'templates': clusterTemplates, 'inventory_mode': 1, 'inventory': {'location': domainName, 'vendor': 'Check Point'}})
-            else:
-                if self.snmpVersion == '3':
-                    self.zabbixClient.do_request('host.create', {'host': clusterName, 'status': clusterStatus, 'interfaces': [{'type': 2, 'main': 1, 'useip': 1, 'ip': clusterInfo.data['ipv4-address'], 'dns': '', 'port': '161', 'details': {'version': 3, 'bulk': 1, 'securityname': self.snmpUser, 'securitylevel': 2, 'authpassphrase': self.snmpAuth, 'authprotocol': 1, 'privpassphrase': self.snmpPriv, 'privprotocol': 1}}], 'groups': clusterGroups, 'tags': [{'tag': 'Cluster Name', 'value': clusterName}, {'tag': 'Domain', 'value': domainName}, {'tag': 'Vendor', 'value': 'Check Point'}], 'macros': [{'macro': '{$DOMAIN_NAME}', 'value': domainName}], 'templates': clusterTemplates, 'inventory_mode': 1, 'inventory': {'location': domainName, 'vendor': 'Check Point'}})
+                    Interface['details'] = {'version': 2, 'bulk': 1, 'community': self.snmpCommunity}
+                
+                jsonData['interfaces'] = [Interface]
+                jsonData['groups'] = clusterMembersGroups
+                jsonData['tags'] = []
+                jsonData['tags'].append({'tag': 'Cluster Name', 'value': clusterName})
+                jsonData['tags'].append({'tag': 'Vendor', 'value': 'Check Point'})
+                if self.isMDS == True:
+                    jsonData['tags'].append({'tag': 'Domain', 'value': self.domain})
+                if self.isMDS == True:
+                    jsonData['macros'] = [{'macro': '{$DOMAIN_NAME}', 'value': self.domain}]
+                jsonData['templates'] = clusterMembersTemplates
+                jsonData['inventory_mode'] = 1
+                jsonData['inventory'] = {}
+                jsonData['inventory']['vendor'] = 'Check Point'
+                if self.isMDS == True:
+                    jsonData['inventory']['location'] = domainName
+                
+                self.zabbixClient.do_request('host.create', jsonData)
+            
+            #Building Cluster JSON Request
+                jsonData = {}
+                jsonData['host'] = clusterName
+                jsonData['status'] = clusterStatus
+                Interface = {'type': 2, 'main': 1, 'port': 161}
+                if clusterName in self.daipIP:
+                    Interface['useip'] = 0
+                    Interface['ip'] = ''
+                    Interface['dns'] = self.daipIP[clusterName]
+                else: 
+                    Interface['useip'] = 1
+                    Interface['ip'] = clusterInfo.data['ipv4-address']
+                    Interface['dns'] = ''
+                
+                if self.snmpVersion == '3': 
+                    Interface['details'] = {'version': 3, 'bulk': 1, 'securityname': self.snmpUser, 'securitylevel': 2, 'authpassphrase': self.snmpAuth, 'authprotocol': 1, 'privpassphrase': self.snmpPriv, 'privprotocol': 1}
                 elif self.snmpVersion == '2':
-                    self.zabbixClient.do_request('host.create', {'host': clusterName, 'status': clusterStatus, 'interfaces': [{'type': 2, 'main': 1, 'useip': 1, 'ip': clusterInfo.data['ipv4-address'], 'dns': '', 'port': '161', 'details': {'version': 2, 'bulk': 1, 'community': self.snmpCommunity}}], 'groups': clusterGroups, 'tags': [{'tag': 'Cluster Name', 'value': clusterName}, {'tag': 'Domain', 'value': domainName}, {'tag': 'Vendor', 'value': 'Check Point'}], 'macros': [{'macro': '{$DOMAIN_NAME}', 'value': domainName}], 'templates': clusterTemplates, 'inventory_mode': 1, 'inventory': {'location': domainName, 'vendor': 'Check Point'}})
-            
-            logging.logging('3', f'Successfully added cluster host {clusterName}', 'addClusterHost')
-            
-            self.successClusters.append(clusterName)
-
+                    Interface['details'] = {'version': 2, 'bulk': 1, 'community': self.snmpCommunity}
+                
+                jsonData['interfaces'] = [Interface]
+                jsonData['groups'] =clusterGroups
+                jsonData['tags'] = []
+                jsonData['tags'].append({'tag': 'Cluster Name', 'value': clusterName})
+                jsonData['tags'].append({'tag': 'Vendor', 'value': 'Check Point'})
+                if self.isMDS == True:
+                    jsonData['tags'].append({'tag': 'Domain', 'value': self.domain})
+                if self.isMDS == True:
+                    jsonData['macros'] = [{'macro': '{$DOMAIN_NAME}', 'value': self.domain}]
+                jsonData['templates'] = clusterTemplates
+                jsonData['inventory_mode'] = 1
+                jsonData['inventory'] = {}
+                jsonData['inventory']['vendor'] = 'Check Point'
+                if self.isMDS == True:
+                    jsonData['inventory']['location'] = domainName
+                
+                self.zabbixClient.do_request('host.create', jsonData)
+                
+                logging.logging('3', f'Successfully added cluster host {clusterName}', 'addClusterHost')
+                self.successClusters.append(clusterName)
+                
         except Exception as e:
             logging.logging('2', f'Failed to add cluster {clusterName}', 'addClusterHost', e)
             self.failedClusters.append(clusterName)
@@ -573,15 +655,17 @@ class Pointix():
 
         print('\nThe following Clusters were ignored due to being in ignore-ip:')
         print(self.ignoredClusters)
+        
+        if self.isMDS == True:
+            print('\nThe following CMA Management servers have successfully been added to Zabbix:')
+            print(self.successManagement)
 
-        print('\nThe following CMA Management servers have successfully been added to Zabbix:')
-        print(self.successManagement)
+            print('\nThe following CMA Management Servers have failed to add to Zabbix:')
+            print(self.failedManagement)
 
-        print('\nThe following CMA Management Servers have failed to add to Zabbix:')
-        print(self.failedManagement)
+            print('\nThe following CMA Management Servers were ignored due to being in ignore-ip:')
+            print(self.ignoredManagement)
 
-        print('\nThe following CMA Management Servers were ignored due to being in ignore-ip:')
-        print(self.ignoredManagement)
 
     def logResults(self):
         # Outputs the results of adding the hosts to Zabbix into the log file
@@ -603,12 +687,13 @@ class Pointix():
 
         loggingFile.write('\nThe following Clusters were ignored due to being in ignore-ip:')
         loggingFile.write(f'{self.ignoredClusters}')
+        
+        if self.isMDS == True:
+            loggingFile.write('\nThe following CMA Management servers have successfully been added to Zabbix:')
+            loggingFile.write(f'{self.successManagement}')
 
-        loggingFile.write('\nThe following CMA Management servers have successfully been added to Zabbix:')
-        loggingFile.write(f'{self.successManagement}')
+            loggingFile.write('\nThe following CMA Management Servers have failed to add to Zabbix:')
+            loggingFile.write(f'{self.failedManagement}')
 
-        loggingFile.write('\nThe following CMA Management Servers have failed to add to Zabbix:')
-        loggingFile.write(f'{self.failedManagement}')
-
-        loggingFile.write('\nThe following CMA Management Servers were ignored due to being in ignore-ip:')
-        loggingFile.write(f'{self.ignoredManagement}')
+            loggingFile.write('\nThe following CMA Management Servers were ignored due to being in ignore-ip:')
+            loggingFile.write(f'{self.ignoredManagement}')

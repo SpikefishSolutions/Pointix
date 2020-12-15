@@ -31,13 +31,21 @@ from spikefish.checkpoint.apiv161.cp_apicalls import cpAuth
 def main(argv):
     try:
         opts, args = getopt.getopt(argv, 'c:d:z:s:')
+        arguements = dict(opts)
+        try:
+            if arguements['-d'] != False:
+                isMDS = True
+        except:
+            isMDS = False
     except getopt.GetoptError:
         print('usage: main.py -c <MDSIP> -d <domain> -z <ZABBIXURL> -s <SNMPVERSION(2 or 3)>')
         return
-    arguements = dict(opts)
-
+    
     # Initiate the Pointix object
-    pointix = Pointix(arguements['-c'], arguements['-d'], arguements['-z'], arguements['-s'])
+    if isMDS == True:
+        pointix = Pointix(arguements['-c'], arguements['-z'], arguements['-s'], arguements['-d'])
+    elif isMDS == False:
+        pointix = Pointix(arguements['-c'], arguements['-z'], arguements['-s'])
 
     # Read the groups from the groups-templates file
     pointix.getGroups()
@@ -54,13 +62,17 @@ def main(argv):
     pointix.getAllGroups()
 
     # Obtain the management servers, gateways, and clusters from the Check Point API specified domain
-    pointix.getManageServers()
-    pointix.authCheckPointDomain()
+    if isMDS == True:
+        pointix.getManageServers()
+        pointix.authCheckPointDomain()
+    
     pointix.getGateways()
     pointix.getClusters()
 
     # Add the devices to Zabbix
-    pointix.addAllManagement()
+    if isMDS == True:
+        pointix.addAllManagement()
+        
     pointix.addAllGateways()
     pointix.addAllClusters()
 
