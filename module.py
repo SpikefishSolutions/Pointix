@@ -236,8 +236,6 @@ class Pointix():
             gatewaysResultsTemp = gatewaysResults[x]
             self.gatewaysUid.append(gatewaysResultsTemp['uid'])
             self.gatewaysNames.append(gatewaysResultsTemp['name'])
-        
-        print(self.gatewaysNames)
 
         logging.logging('3', 'Successfully pulled gateways from MDS', 'getGateways')
         return
@@ -590,44 +588,44 @@ class Pointix():
                 self.zabbixClient.do_request('host.create', jsonData)
             
             #Building Cluster JSON Request
-                jsonData = {}
-                jsonData['host'] = clusterName
-                jsonData['status'] = clusterStatus
-                Interface = {'type': 2, 'main': 1, 'port': 161}
-                if clusterName in self.daipIP:
-                    Interface['useip'] = 0
-                    Interface['ip'] = ''
-                    Interface['dns'] = self.daipIP[clusterName]
-                else: 
-                    Interface['useip'] = 1
-                    Interface['ip'] = clusterInfo.data['ipv4-address']
-                    Interface['dns'] = ''
-                
-                if self.snmpVersion == '3': 
-                    Interface['details'] = {'version': 3, 'bulk': 1, 'securityname': self.snmpUser, 'securitylevel': 2, 'authpassphrase': self.snmpAuth, 'authprotocol': 1, 'privpassphrase': self.snmpPriv, 'privprotocol': 1}
-                elif self.snmpVersion == '2':
-                    Interface['details'] = {'version': 2, 'bulk': 1, 'community': self.snmpCommunity}
-                
-                jsonData['interfaces'] = [Interface]
-                jsonData['groups'] =clusterGroups
-                jsonData['tags'] = []
-                jsonData['tags'].append({'tag': 'Cluster Name', 'value': clusterName})
-                jsonData['tags'].append({'tag': 'Vendor', 'value': 'Check Point'})
-                if self.isMDS == True:
-                    jsonData['tags'].append({'tag': 'Domain', 'value': self.domain})
-                if self.isMDS == True:
-                    jsonData['macros'] = [{'macro': '{$DOMAIN_NAME}', 'value': self.domain}]
-                jsonData['templates'] = clusterTemplates
-                jsonData['inventory_mode'] = 1
-                jsonData['inventory'] = {}
-                jsonData['inventory']['vendor'] = 'Check Point'
-                if self.isMDS == True:
-                    jsonData['inventory']['location'] = domainName
-                
-                self.zabbixClient.do_request('host.create', jsonData)
-                
-                logging.logging('3', f'Successfully added cluster host {clusterName}', 'addClusterHost')
-                self.successClusters.append(clusterName)
+            jsonData = {}
+            jsonData['host'] = clusterName
+            jsonData['status'] = clusterStatus
+            Interface = {'type': 2, 'main': 1, 'port': 161}
+            if clusterName in self.daipIP:
+                Interface['useip'] = 0
+                Interface['ip'] = ''
+                Interface['dns'] = self.daipIP[clusterName]
+            else: 
+                Interface['useip'] = 1
+                Interface['ip'] = clusterInfo.data['ipv4-address']
+                Interface['dns'] = ''
+            
+            if self.snmpVersion == '3': 
+                Interface['details'] = {'version': 3, 'bulk': 1, 'securityname': self.snmpUser, 'securitylevel': 2, 'authpassphrase': self.snmpAuth, 'authprotocol': 1, 'privpassphrase': self.snmpPriv, 'privprotocol': 1}
+            elif self.snmpVersion == '2':
+                Interface['details'] = {'version': 2, 'bulk': 1, 'community': self.snmpCommunity}
+            
+            jsonData['interfaces'] = [Interface]
+            jsonData['groups'] =clusterGroups
+            jsonData['tags'] = []
+            jsonData['tags'].append({'tag': 'Cluster Name', 'value': clusterName})
+            jsonData['tags'].append({'tag': 'Vendor', 'value': 'Check Point'})
+            if self.isMDS == True:
+                jsonData['tags'].append({'tag': 'Domain', 'value': self.domain})
+            if self.isMDS == True:
+                jsonData['macros'] = [{'macro': '{$DOMAIN_NAME}', 'value': self.domain}]
+            jsonData['templates'] = clusterTemplates
+            jsonData['inventory_mode'] = 1
+            jsonData['inventory'] = {}
+            jsonData['inventory']['vendor'] = 'Check Point'
+            if self.isMDS == True:
+                jsonData['inventory']['location'] = domainName
+            
+            self.zabbixClient.do_request('host.create', jsonData)
+            
+            logging.logging('3', f'Successfully added cluster host {clusterName}', 'addClusterHost')
+            self.successClusters.append(clusterName)
                 
         except Exception as e:
             logging.logging('2', f'Failed to add cluster {clusterName}', 'addClusterHost', e)
